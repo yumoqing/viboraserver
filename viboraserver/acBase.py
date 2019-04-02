@@ -20,7 +20,7 @@ class RefusedResource(StaticHandler):
 		path = self.extract_path(request)
 		return path + b':refused access!'
 
-class UnknownException(Resource):
+class UnknownException(StaticHandler):
 	def __init__(self,e,*args,**kwargs):
 		super(UnknownException,self).__init__(*args,**kwargs)
 		self.e = e
@@ -114,8 +114,8 @@ class ACBase:
 		return True
         
 class BaseResource(StaticHandler):
-	def __init__(self,path,accessController=None):
-		super(BaseResource,self).__init__(paths=[path],url_prefix='')
+	def __init__(self,paths,accessController=None):
+		super(BaseResource,self).__init__(paths=paths,url_prefix='')
 		self.processors = {}
 		self.access_controller = accessController
 
@@ -136,15 +136,17 @@ class BaseResource(StaticHandler):
 					if self.endsWith(path,k):
 						h = self.processors[k](path)
 						return h.handle(request)
-				return super(BaseResource,self).handle(reqest)
-		return raise StaticNotFound()
+				print('no processor defined,using parent class')
+				return await super(BaseResource,self).handle(request)
+		raise StaticNotFound()
 		
 	async def handle(self,request:Request):
+		print('handle....')
 		if self.access_controller is None:
-			return self._handle(request)
+			return await self._handle(request)
 
 		if self.access_controller.accessCheck(request):
-			return self._handle(request)
+			return await self._handle(request)
 
 		raise UserNeedLogin
 
