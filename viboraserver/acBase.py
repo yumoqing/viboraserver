@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import os
 import traceback
 import copy
 
@@ -11,6 +12,7 @@ from WebServer.globalEnv import UserNeedLogin,WebsiteSessiones
 from vibora.request import Request
 from vibora.static import StaticHandler
 from vibora.exceptions import StaticNotFound
+from .baseProcessor import getProcessor
 
 class NotImplementYet(Exception):
     pass
@@ -86,7 +88,7 @@ class ACBase:
 		raise NotImplementYet
 		
 	def acCheck(self,request):
-		path = self.extract_path(request)
+		path = self.resource.extract_path(request)
 		ws = WebsiteSessiones()
 		user =  ws.getUserid(request)
 		if user == None:
@@ -105,7 +107,7 @@ class ACBase:
 		"""
 		检查用户是否由权限访问此url
 		"""
-		path = self.extract_path(request)
+		path = self.resource.extract_path(request)
 		if self.isNeedLogin(path):
 			# print('need login')
 			return self.acCheck(request)
@@ -117,27 +119,72 @@ class BaseResource(StaticHandler):
 	def __init__(self,paths,accessController=None):
 		super(BaseResource,self).__init__(paths=paths,url_prefix='')
 		self.processors = {}
+		self.indexes = []
 		self.access_controller = accessController
+		if accessController is not None:
+			self.access_controller.resource = self
 
 	def endsWith(self,f,s):
 		f = f.encode('utf-8') if hasattr(f,'encode') else f
 		s = s.encode('utf-8') if hasattr(f,'encode') else s
 		return endsWith(f.lower(),s.lower())
 
+	def absUrl(self,request,url):
+		http='http://'
+		https='https://'
+		if url[:7] == http:
+			return url
+		if url[:8] == https:
+			return url
+
+		paths = self.extract_path(request).split('/')[:-1]
+		if url[0] == '/':
+			return url
+		for d in url.split('/'):
+			if d == '' or d is None:
+				continue
+			if d == '.':
+				continue
+			if d == '..':
+				paths = paths[:-1]
+				continue
+			paths.append(d)
+		ret = '/'.join(paths)
+		if url[-1]=='/':
+			ret = ret + '/'
+		return ret
+
 	def add_processor(self,id,Klass):
 		self.processors[id] = Klass
 
 	async def _handle(self,request:Request):
 		path = self.extract_path(request)
+		if path[-1] == '/':
+			path = path[:-1]
 		for root_path in self.paths:
 			real_path = root_path + path
 			if self.exists(real_path):
+				if os.path.isdir(real_path):
+					p = None
+					for f in self.indexes:
+						pp = os.path.join(real_path,f)
+						print(f'pp=',pp)
+						if self.exists(pp):
+							p = pp
+							break
+					if p is not None:
+						real_path = p
+					
 				for k in self.processors.keys():
-					if self.endsWith(path,k):
-						h = self.processors[k](path)
+					print(f'real_path={real_path},k={k}')
+					if endsWith(real_path,k):
+						name = self.processors[k]
+						klass = getProcessor(name)
+						h = klass(real_path,self)
 						return h.handle(request)
 				print('no processor defined,using parent class')
 				return await super(BaseResource,self).handle(request)
+		print(f'path={path},real_path={real_path}')
 		raise StaticNotFound()
 		
 	async def handle(self,request:Request):
