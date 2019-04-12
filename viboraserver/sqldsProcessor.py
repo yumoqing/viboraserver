@@ -1,8 +1,8 @@
 import codecs
-from WebServer.dsProcessor import DataSourceProcessor
+from .dsProcessor import DataSourceProcessor
 from appPublic.jsonConfig import getConfig
 from sql.sqlorAPI import runSQLResultFields,runSQLIterator,runSQLPaging
-import ujson as json
+import  json
 """
 sqlds file format:
 {

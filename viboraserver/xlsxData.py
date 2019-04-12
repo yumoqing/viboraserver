@@ -1,5 +1,5 @@
 from openpyxl import load_workbook
-import ujson as json
+import json
 
 """
 xlsxds file format:

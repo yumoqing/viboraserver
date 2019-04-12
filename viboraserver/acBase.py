@@ -1,21 +1,37 @@
 # coding: utf-8
 
 import os
+import re
 import traceback
 import copy
+import json
 
 from appPublic.jsonConfig import getConfig
 from appPublic.folderUtils import endsWith
+from appPublic.MiniI18N import getI18N
 from appPublic.rsa import RSA
-from WebServer.globalEnv import UserNeedLogin,WebsiteSessiones
 
 from vibora.request import Request
 from vibora.static import StaticHandler
 from vibora.exceptions import StaticNotFound
 from .baseProcessor import getProcessor
+from .xlsxdsProcessor import XLSXDataSourceProcessor
+from .sqldsProcessor import SQLDataSourceProcessor
+from .serverenv import ServerEnv
+from .globalEnv import envsetted
 
 class NotImplementYet(Exception):
-    pass
+	pass
+
+class UserNeedLogin(StaticHandler):
+	pass
+
+def i18nDICT(request):
+	c = getConfig()
+	i18n = getI18N()
+	lang = request.headers.get('Accept-Language').split(',')[0]
+	l = c.langMapping.get(lang,lang)
+	return json.dumps(i18n.getLangDict(l)).encode(c.website.coding)
 
 class RefusedResource(StaticHandler):
 	async def handle(self,request:Request):
@@ -129,6 +145,128 @@ class BaseResource(StaticHandler):
 		s = s.encode('utf-8') if hasattr(f,'encode') else s
 		return endsWith(f.lower(),s.lower())
 
+	def abspath(self,path):
+		for rpath in self.paths:
+			real_path = rpath + path
+			if os.path.isfile(real_path):
+				return real_path
+		return None
+
+	def requestPaths(self,request):
+		path = self.extract_path(request)
+		for rpath in self.paths:
+			real_path = rpath + path
+			if os.path.isfile(real_path):
+				return path.split('/')[:-1]
+			if os.path.isdir(real_path):
+				return path.split('/')
+		return []
+
+	async def _handle(self,request:Request):
+		path = self.extract_path(request)
+		if path[-1] == '/':
+			path = path[:-1]
+		for root_path in self.paths:
+			real_path = root_path + path
+			if os.path.isdir(real_path):
+				p = None
+				for f in self.indexes:
+					pp = os.path.join(real_path,f)
+					if self.exists(pp):
+						p = pp
+						break
+				if p is not None:
+					real_path = p
+			if self.exists(real_path):
+				for k,name in self.processors:
+					if endsWith(real_path,k):
+						klass = getProcessor(name)
+						h = klass(real_path,self)
+						return h.handle(request)
+				return await super(BaseResource,self).handle(request)
+		print(f'real_path={real_path} not found')
+		raise StaticNotFound()
+		
+	def getPostArgs(self,request):
+		ret = self.getGetArgs(request)
+		print('getPostArgs(),args=',ret)
+		ret = request.form()
+		return ret
+
+	def getGetArgs(self,request):
+		ret = {}
+		c = getConfig()
+		coding = c.website.coding
+		for k,v in request.args.items():
+			k = k.decode(c.website.coding)
+			if len(v) > 1:
+				v = [i.decode(c.website.coding) for i in v]
+			else:
+				v = v[0].decode(c.website.coding)
+			ret[k] = v
+		return ret
+
+	async def handle(self,request:Request):
+		clientkeys = {
+			"iPhone":"iphone",
+			"iPad":"ipad",
+			"Android":"androidpad",
+			"Windows Phone":"winphone",
+			"Windows NT[.]*Win64; x64":"pc",
+		}
+
+		def i18nDICT():
+			c = getConfig()
+			g = ServerEnv()
+			if not g.get('myi18n',False):
+				g.myi18n = getI18N()
+			lang = request.headers.get('Accept-Language').split(',')[0]
+			l = c.langMapping.get(lang,lang)
+			return json.dumps(g.myi18n.getLangDict(l))
+
+		def getClientType(request):
+			agent = request.headers.get('user-agent')
+			for k in clientkeys.keys():
+				m = re.findall(k,agent)
+				if len(m)>0:
+					return clientkeys[k]
+			return 'pc'
+
+		def serveri18n(s):
+			lang = request.headers.get('Accept-Language').split(',')[0]
+			c = getConfig()
+			g = ServerEnv()
+			if not g.get('myi18n',False):
+				g.myi18n = getI18N()
+			l = c.langMapping.get(lang,lang)
+			return g.myi18n(s,l)
+
+		def getArgs():
+			return self.getGetArgs(request)
+			if request.method == b'GET':
+				return self.getGetArgs(request)
+			else:
+				return self.getPostArgs(request)
+		g = ServerEnv()
+		g.i18n = serveri18n
+		g.i18nDict = i18nDICT
+		g.terminalType = getClientType(request)
+		g.absurl = self.absUrl
+		g.abspath = self.abspath
+		g.request = request
+		g.request2ns = getArgs
+		g.resource = self
+
+		path = self.extract_path(request)
+		print(f'handle {path}..',request.method)
+		if self.access_controller is None:
+			return await self._handle(request)
+
+		if self.access_controller.accessCheck(request):
+			return await self._handle(request)
+
+		raise UserNeedLogin
+
 	def absUrl(self,request,url):
 		http='http://'
 		https='https://'
@@ -137,7 +275,7 @@ class BaseResource(StaticHandler):
 		if url[:8] == https:
 			return url
 
-		paths = self.extract_path(request).split('/')[:-1]
+		paths = self.requestPaths(request)
 		if url[0] == '/':
 			return url
 		for d in url.split('/'):
@@ -153,47 +291,4 @@ class BaseResource(StaticHandler):
 		if url[-1]=='/':
 			ret = ret + '/'
 		return ret
-
-	def add_processor(self,id,Klass):
-		self.processors[id] = Klass
-
-	async def _handle(self,request:Request):
-		path = self.extract_path(request)
-		if path[-1] == '/':
-			path = path[:-1]
-		for root_path in self.paths:
-			real_path = root_path + path
-			if self.exists(real_path):
-				if os.path.isdir(real_path):
-					p = None
-					for f in self.indexes:
-						pp = os.path.join(real_path,f)
-						print(f'pp=',pp)
-						if self.exists(pp):
-							p = pp
-							break
-					if p is not None:
-						real_path = p
-					
-				for k in self.processors.keys():
-					print(f'real_path={real_path},k={k}')
-					if endsWith(real_path,k):
-						name = self.processors[k]
-						klass = getProcessor(name)
-						h = klass(real_path,self)
-						return h.handle(request)
-				print('no processor defined,using parent class')
-				return await super(BaseResource,self).handle(request)
-		print(f'path={path},real_path={real_path}')
-		raise StaticNotFound()
-		
-	async def handle(self,request:Request):
-		print('handle....')
-		if self.access_controller is None:
-			return await self._handle(request)
-
-		if self.access_controller.accessCheck(request):
-			return await self._handle(request)
-
-		raise UserNeedLogin
 

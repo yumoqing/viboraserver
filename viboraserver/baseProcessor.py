@@ -1,7 +1,13 @@
 import os
 import re
+import json
 import codecs
+
 from appPublic.folderUtils import endsWith
+from appPublic.jsonConfig import getConfig
+
+from patterncoding.myTemplateEngine import MyTemplateEngine
+
 from vibora.responses import Response,CachedResponse
 from .serverenv import ServerEnv
 
@@ -23,34 +29,64 @@ class BaseProcessor:
 
 	
 	def handle(self,request):
-		with codecs.open(self.path,'r','utf-8') as f:
-			self.datahandle(f.read(),request)
-		self.content = self.content if isinstance(self.content,Bytes) else self.content.encode('utf-8')
+		config = getConfig()
+		self.datahandle(request)
+		if type(self.content) == type({}):
+			self.content = json.dumps(self.content,
+				indent=4)
+		if type(self.content) == type([]):
+			self.content = json.dumps(self.content,
+				indent=4)
+		self.content = self.content if isinstance(self.content,bytes) else self.content.encode('utf-8')
 		self.setheaders()
-		return Response(self.content,self.headers)
+		return CachedResponse(self.content,headers=self.headers)
+
+	def datahandle(self,txt,request):
+		print('*******Error*************')
+		self.content=''
 
 	def setheaders(self):
 		self.headers['Content-Length'] = str(len(self.content))
-
-	def datahandle(self):
-		pass
 
 class TemplateProcessor(BaseProcessor):
 	@classmethod
 	def isMe(self,name):
 		return name=='tmpl'
 
-	def datahandle(self,data,request):
+	def pathtree(self,root,path):
+		a = []
+		while 1:
+			if os.path.isdir(root+path):
+				a.append(root + path)
+			path = '/'.join(path.split('/')[:-1])
+			if path == '':
+				break
+		a.append(root)
+		return a
+		
+	def datahandle(self,request):
+		path = self.resource.extract_path(request)
+		a = []
+		for p in self.resource.paths:
+			a += self.pathtree(p,path)
 		g = ServerEnv()
-		ns = request.args
-		self.content = g.tmplRender.renders(data,ns)	
+		#ns = request.args
+		ns = {}
+		config = getConfig()
+		te = MyTemplateEngine(a,config.website.coding,
+					config.website.coding,
+					getGlobal=ServerEnv)
+		te.env.globals.update(g)
+		with codecs.open(self.path,'rb','utf-8') as f:
+			data = f.read()
+			self.content = te.renders(data,ns)
 		
 	def setheaders(self):
 		super(TemplateProcessor,self).setheaders()
-		if endsWith(self.path,'.css.tmpl'):
+		if self.path.endswith('.tmpl.css'):
 			self.headers['Content-Type'] = 'text/css; utf-8'
-		elif endsWith(self.path,'.js.tmpl'):
-			self.headers['Content-Type'] = 'text/js; utf-8'
+		elif self.path.endswith('.tmpl.js'):
+			self.headers['Content-Type'] = 'application/javascript ; utf-8'
 		else:
 			self.headers['Content-Type'] = 'text/html; utf-8'
 
@@ -60,7 +96,10 @@ class PythonScriptProcessor(BaseProcessor):
 	def isMe(self,name):
 		return name=='dspy'
 
-	def datahandle(self,data,request):
+	def datahandle(self,request):
+		data = ''
+		with codecs.open(self.path,'rb','utf-8') as f:
+			data = f.read()
 		b= ''.join(data.split('\r'))
 		lines = b.split('\n')
 		lines = ['\t' + l for l in lines ]
@@ -89,7 +128,10 @@ class MarkdownProcessor(BaseProcessor):
 	def isMe(self,name):
 		return name=='md'
 
-	def datahandle(self,data,request):
+	def datahandle(self,request):
+		data = ''
+		with codecs.open(self.path,'rb','utf-8') as f:
+			data = f.read()
 		b = data
 		b = self.urlreplace(b,request)
 		ret = {
@@ -98,8 +140,8 @@ class MarkdownProcessor(BaseProcessor):
 					"md_text":b
 				}
 		}
-		self.file_data = ret
-		return self.file_data
+		config = getConfig()
+		self.content = json.dumps(ret,indent=4)
 
 	def urlreplace(self,mdtxt,request):
 		def replaceURL(s):

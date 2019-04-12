@@ -9,9 +9,12 @@ from appPublic.jsonConfig import getConfig
 
 from sql.sqlorAPI import DBPools
 
-from viboraserver.acBase import BaseResource
+from viboraserver.acBase import BaseResource,i18nDICT
 from viboraserver.serverenv import ServerEnv
+from viboraserver.xlsxdsProcessor import XLSXDataSourceProcessor
 
+from vibora.request import Request
+from vibora.responses import Response,CachedResponse
 from vibora import Vibora
 
 def setupEnv():
@@ -36,6 +39,9 @@ def start():
 	resource.processors = config.website.processors
 	print(resource.indexes)
 	app = Vibora( static = resource)
+	@app.route('/getI18nDict',methods=['POST','GET'])
+	async def getI18nDict(request:Request):
+		return CachedResponse(i18nDICT(request))
 	app.run(debug=config.debug,host=config.website.host,port=config.website.port)
 
 if __name__ == '__main__':

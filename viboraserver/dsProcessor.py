@@ -1,28 +1,14 @@
-
+import codecs
+import json
 from appPublic.jsonConfig import getConfig
-from WebServer.configuredResource import BaseProcessor
-from WebServer.globalEnv import request2ns,absUrl
+from .baseProcessor import BaseProcessor
+from .serverenv import ServerEnv
 
 class DataSourceProcessor(BaseProcessor):
 	@classmethod
 	def isMe(self,name):
 		return name=='ds'
 		
-	def getArgumentsDesc(self,dict_data,ns,request):
-		return dict_data
-	
-	def getDataDesc(self,dict_data,ns,request):
-		return dict_data
-	
-	def getData(self,dict_data,ns,request):
-		return dict_data
-	
-	def getPagingData(self,dict_data,ns,request):
-		return dict_data
-
-	def getGridlist(self,dict_data,ns,request):
-		return dict_data
-	
 	def __init__(self,filename,k):
 		super(DataSourceProcessor,self).__init__(filename,k)
 		self.actions = {
@@ -32,8 +18,12 @@ class DataSourceProcessor(BaseProcessor):
 			'resultFields':self.getDataDesc,
 			'gridlist':self.getGridlist,
 		}
-		self.setCallback(self.dataHandler)
+		self.g = ServerEnv()
 		
+	def getData(self,dict_data,ns,request):pass
+	def getPagingData(self,dict_data,ns,request):pass
+	def getArgumentsDesc(self,dict_data,ns,request):pass
+	def getDataDesc(self,dict_data,ns,request):pass
 	def getGridlist(self,dict_data,ns,request):
 		ret = self.getDataDesc(dict_data,ns,request)
 		ffs = [ f for f in ret if f.get('frozen',False) ]
@@ -42,7 +32,7 @@ class DataSourceProcessor(BaseProcessor):
 		[ f.update({'hide':True}) for f in fs if f.get('listhide') ]
 		d = {
 			"iconCls":"icon-search",
-			"url":absUrl(request,request.path + '?action=pagingdata'),
+			"url":self.resource.absUrl(request,request.path + '?action=pagingdata'),
 			"view":"bufferview",
 			"options":{
 				"pageSize":50,
@@ -58,11 +48,15 @@ class DataSourceProcessor(BaseProcessor):
 		}
 		return ret
 
-	def dataHandler(self,dict_data,request):
-		ns = request2ns(request)
-		self.file_data = dict_data
+	def datahandle(self,request):
+		dict_data = {}
+		config = getConfig()
+		with codecs.open(self.path,'r',config.website.coding) as f:
+			b = f.read()
+			dict_data = json.loads(b)
+		ns = self.g.request2ns()
 		act = ns.get('action','getdata')
 		action = self.actions.get(act)
-		return action(dict_data,ns,request)
+		self.content = action(dict_data,ns,request)
 		
 	
