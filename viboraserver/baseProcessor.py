@@ -3,7 +3,6 @@ import re
 import json
 import codecs
 
-from appPublic.folderUtils import endsWith
 from appPublic.jsonConfig import getConfig
 
 from patterncoding.myTemplateEngine import MyTemplateEngine
