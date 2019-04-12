@@ -178,7 +178,7 @@ class BaseResource(StaticHandler):
 					real_path = p
 			if self.exists(real_path):
 				for k,name in self.processors:
-					if endsWith(real_path,k):
+					if real_path.endswith(k):
 						klass = getProcessor(name)
 						h = klass(real_path,self)
 						return h.handle(request)
