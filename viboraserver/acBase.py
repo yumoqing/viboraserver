@@ -25,10 +25,16 @@ class NotImplementYet(Exception):
 class UserNeedLogin(StaticHandler):
 	pass
 
+def getHeaderLang(request):
+	al = request.headers.get('Accept-Language')
+	if al is None:
+		return 'en'
+	return al.split(',')[0]
+	
 def i18nDICT(request):
 	c = getConfig()
 	i18n = getI18N()
-	lang = request.headers.get('Accept-Language').split(',')[0]
+	lang = getHeaderLang(request)
 	l = c.langMapping.get(lang,lang)
 	return json.dumps(i18n.getLangDict(l)).encode(c.website.coding)
 
@@ -219,12 +225,15 @@ class BaseResource(StaticHandler):
 			g = ServerEnv()
 			if not g.get('myi18n',False):
 				g.myi18n = getI18N()
-			lang = request.headers.get('Accept-Language').split(',')[0]
+			lang = getHeaderLang(request)
 			l = c.langMapping.get(lang,lang)
 			return json.dumps(g.myi18n.getLangDict(l))
 
 		def getClientType(request):
 			agent = request.headers.get('user-agent')
+			if type(agent)!=type('') or type(agent)!=type(b''):
+				print('getClientType(),agent=',agent)
+				return 'pc'
 			for k in clientkeys.keys():
 				m = re.findall(k,agent)
 				if len(m)>0:
@@ -232,7 +241,7 @@ class BaseResource(StaticHandler):
 			return 'pc'
 
 		def serveri18n(s):
-			lang = request.headers.get('Accept-Language').split(',')[0]
+			lang = getHeaderLang(request)
 			c = getConfig()
 			g = ServerEnv()
 			if not g.get('myi18n',False):
