@@ -7,7 +7,6 @@ import copy
 import json
 
 from appPublic.jsonConfig import getConfig
-from appPublic.folderUtils import endsWith
 from appPublic.MiniI18N import getI18N
 from appPublic.rsa import RSA
 
