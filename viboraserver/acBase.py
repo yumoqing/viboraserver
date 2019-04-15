@@ -9,8 +9,11 @@ import json
 from appPublic.jsonConfig import getConfig
 from appPublic.MiniI18N import getI18N
 from appPublic.rsa import RSA
+from appPublic.dictObject import DictObject
 
+from vibora import Vibora
 from vibora.request import Request
+from vibora.router import Route
 from vibora.static import StaticHandler
 from vibora.exceptions import StaticNotFound
 from .baseProcessor import getProcessor
@@ -18,6 +21,15 @@ from .xlsxdsProcessor import XLSXDataSourceProcessor
 from .sqldsProcessor import SQLDataSourceProcessor
 from .serverenv import ServerEnv
 from .globalEnv import envsetted
+from .url2file import Url2File
+
+class MyApp(Vibora):
+	def _configure_static_files(self):
+		if self.static:
+			static_route = Route((self.static.url_prefix + '/.*').encode(), self.static.handle,
+				methods=(b'GET', b'POST', b'HEAD'), parent=self, limits=self.limits)
+			self.router.add_route(static_route, {'': ''}, check_slashes=False)
+
 
 class NotImplementYet(Exception):
 	pass
@@ -124,7 +136,7 @@ class ACBase:
 			raise UnauthorityResource()
 		return True
 		
-	def accessCheck(self,request):
+	def accessCheck(self,request: Request):
 		"""
 		检查用户是否由权限访问此url
 		"""
@@ -136,69 +148,44 @@ class ACBase:
 		# print('not need login')
 		return True
         
-class BaseResource(StaticHandler):
-	def __init__(self,paths,accessController=None):
+class BaseResource(StaticHandler,Url2File):
+	def __init__(self,paths: list, indexes: list=[], accessController=None):
+		StaticHandler.__init__(self,paths=paths,url_prefix='')
+		Url2File.__init__(self,paths,indexes,inherit=True)
 		super(BaseResource,self).__init__(paths=paths,url_prefix='')
 		self.processors = {}
-		self.indexes = []
+		self.indexes = indexes
+		self.app = None
 		self.access_controller = accessController
 		if accessController is not None:
 			self.access_controller.resource = self
+		self.env = DictObject()
 
-	def endsWith(self,f,s):
-		f = f.encode('utf-8') if hasattr(f,'encode') else f
-		s = s.encode('utf-8') if hasattr(f,'encode') else s
-		return endsWith(f.lower(),s.lower())
+	def setApp(app):
+		self.app = app
 
-	def abspath(self,path):
+	def abspath(self,path:str):
 		for rpath in self.paths:
 			real_path = rpath + path
 			if os.path.isfile(real_path):
 				return real_path
 		return None
 
-	def requestPaths(self,request):
-		path = self.extract_path(request)
-		for rpath in self.paths:
-			real_path = rpath + path
-			if os.path.isfile(real_path):
-				return path.split('/')[:-1]
-			if os.path.isdir(real_path):
-				return path.split('/')
-		return []
-
 	async def _handle(self,request:Request):
 		path = self.extract_path(request)
-		if path[-1] == '/':
-			path = path[:-1]
-		for root_path in self.paths:
-			real_path = root_path + path
-			if os.path.isdir(real_path):
-				p = None
-				for f in self.indexes:
-					pp = os.path.join(real_path,f)
-					if self.exists(pp):
-						p = pp
-						break
-				if p is not None:
-					real_path = p
-			if self.exists(real_path):
-				for k,name in self.processors:
-					if real_path.endswith(k):
-						klass = getProcessor(name)
-						h = klass(real_path,self)
-						return h.handle(request)
-				return await super(BaseResource,self).handle(request)
-		print(f'real_path={real_path} not found')
-		raise StaticNotFound()
+		realpath = self.url2file(path)
+		if realpath is None:
+			print(f'realpath={realpath} not found')
+			raise StaticNotFound()
+			
+		for k,name in self.processors:
+			if realpath.endswith(k):
+				klass = getProcessor(name)
+				h = klass(realpath,self)
+				return await h.handle(request)
+		return await super(BaseResource,self).handle(request)
 		
-	def getPostArgs(self,request):
-		ret = self.getGetArgs(request)
-		print('getPostArgs(),args=',ret)
-		ret = request.form()
-		return ret
-
-	def getGetArgs(self,request):
+	def getGetArgs(self,request:Request):
 		ret = {}
 		c = getConfig()
 		coding = c.website.coding
@@ -231,8 +218,7 @@ class BaseResource(StaticHandler):
 
 		def getClientType(request):
 			agent = request.headers.get('user-agent')
-			if type(agent)!=type('') or type(agent)!=type(b''):
-				print('getClientType(),agent=',agent)
+			if type(agent)!=type('') and type(agent)!=type(b''):
 				return 'pc'
 			for k in clientkeys.keys():
 				m = re.findall(k,agent)
@@ -251,19 +237,13 @@ class BaseResource(StaticHandler):
 
 		def getArgs():
 			return self.getGetArgs(request)
-			if request.method == b'GET':
-				return self.getGetArgs(request)
-			else:
-				return self.getPostArgs(request)
-		g = ServerEnv()
-		g.i18n = serveri18n
-		g.i18nDict = i18nDICT
-		g.terminalType = getClientType(request)
-		g.absurl = self.absUrl
-		g.abspath = self.abspath
-		g.request = request
-		g.request2ns = getArgs
-		g.resource = self
+		self.env.i18n = serveri18n
+		self.env.i18nDict = i18nDICT
+		self.env.terminalType = getClientType(request)
+		self.env.absurl = self.absUrl
+		self.env.abspath = self.abspath
+		self.env.request2ns = getArgs
+		self.env.resource = self
 
 		path = self.extract_path(request)
 		print(f'handle {path}..',request.method)
@@ -283,20 +263,6 @@ class BaseResource(StaticHandler):
 		if url[:8] == https:
 			return url
 
-		paths = self.requestPaths(request)
-		if url[0] == '/':
-			return url
-		for d in url.split('/'):
-			if d == '' or d is None:
-				continue
-			if d == '.':
-				continue
-			if d == '..':
-				paths = paths[:-1]
-				continue
-			paths.append(d)
-		ret = '/'.join(paths)
-		if url[-1]=='/':
-			ret = ret + '/'
-		return ret
+		path = self.extract_path(request)
+		return self.relatedurl(path,url)
 

@@ -2,14 +2,38 @@ import os
 import re
 import json
 import codecs
+from jinja2 import Template,Environment,BaseLoader
 
 from appPublic.jsonConfig import getConfig
-
-from patterncoding.myTemplateEngine import MyTemplateEngine
+from appPublic.dictObject import DictObject
+from appPublic.folderUtils import listFile
 
 from vibora.responses import Response,CachedResponse
+from vibora.request import Request
 from .serverenv import ServerEnv
 
+class ObjectCache:
+	def __init__(self):
+		self.cache = {}
+
+	def store(self,path,obj):
+		o = self.cache.get(path)
+		if o:
+			del o.cached_obj
+		o = DictObject()
+		o.cached_obj = obj
+		o.mtime = os.path.getmtime(path)
+		self.cache[path] = o
+
+	def get(self,path):
+		o = self.cache.get(path)
+		if o:
+			if os.path.getmtime(path) > o.mtime:
+				return None
+			return o.cached_obj
+		return None
+
+		
 class BaseProcessor:
 	@classmethod
 	def isMe(self,name):
@@ -18,6 +42,7 @@ class BaseProcessor:
 	def __init__(self,path,resource):
 		self.path = path
 		self.resource = resource
+		self.retResponse = None
 		self.last_modified = os.path.getmtime(path)
 		self.content_length = os.path.getsize(path)
 		self.headers = {
@@ -27,9 +52,11 @@ class BaseProcessor:
 		}
 
 	
-	def handle(self,request):
+	async def handle(self,request):
 		config = getConfig()
-		self.datahandle(request)
+		await self.datahandle(request)
+		if self.retResponse is not None:
+			return self.retResponse
 		if type(self.content) == type({}):
 			self.content = json.dumps(self.content,
 				indent=4)
@@ -40,7 +67,7 @@ class BaseProcessor:
 		self.setheaders()
 		return CachedResponse(self.content,headers=self.headers)
 
-	def datahandle(self,txt,request):
+	async def datahandle(self,txt,request):
 		print('*******Error*************')
 		self.content=''
 
@@ -52,33 +79,17 @@ class TemplateProcessor(BaseProcessor):
 	def isMe(self,name):
 		return name=='tmpl'
 
-	def pathtree(self,root,path):
-		a = []
-		while 1:
-			if os.path.isdir(root+path):
-				a.append(root + path)
-			path = '/'.join(path.split('/')[:-1])
-			if path == '':
-				break
-		a.append(root)
-		return a
-		
-	def datahandle(self,request):
+	async def datahandle(self,request):
 		path = self.resource.extract_path(request)
-		a = []
-		for p in self.resource.paths:
-			a += self.pathtree(p,path)
 		g = ServerEnv()
-		#ns = request.args
-		ns = {}
-		config = getConfig()
-		te = MyTemplateEngine(a,config.website.coding,
-					config.website.coding,
-					getGlobal=ServerEnv)
-		te.env.globals.update(g)
-		with codecs.open(self.path,'rb','utf-8') as f:
-			data = f.read()
-			self.content = te.renders(data,ns)
+		ns = DictObject()
+		ns.update(g)
+		ns.update(self.resource.env)
+		ns.request = request
+		ns.ref_real_path = self.path
+		te = g.tmpl_engine
+		self.content = te.render(path,**ns)
+		#self.content = await te.render_async(path,**ns)
 		
 	def setheaders(self):
 		super(TemplateProcessor,self).setheaders()
@@ -95,39 +106,41 @@ class PythonScriptProcessor(BaseProcessor):
 	def isMe(self,name):
 		return name=='dspy'
 
-	def datahandle(self,request):
+	def loadScript(self):
 		data = ''
 		with codecs.open(self.path,'rb','utf-8') as f:
 			data = f.read()
 		b= ''.join(data.split('\r'))
 		lines = b.split('\n')
 		lines = ['\t' + l for l in lines ]
-		txt = "def __myfunc_(request):\n" + '\n'.join(lines)
-		lenv={}
+		txt = "def __myfunc_(request,**ns):\n" + '\n'.join(lines)
 		g = ServerEnv()
-		[ lenv.update({k:g[k]}) for k in g.keys() ]
-		lenv['object'] = self
-		lenv['request'] = request
-		try:
-			exec(txt,lenv,lenv)
-		except Exception as e:
-			print(txt,e,'#################################')
-			traceback.print_exc()
-			raise e
-		try:
-
-			self.content = lenv['__myfunc_'](request)
-		except Exception as e:
-			print("__myfunc__() executed error",e)
-			traceback.print_exc()
-			raise e
+		lenv = {}
+		lenv.update(g)
+		lenv.update(self.resource.env)
+		exec(txt,lenv,lenv)
+		f = lenv['__myfunc_']
+		return f
+		
+	async def datahandle(self,request):
+		g = ServerEnv()
+		if not g.get('dspy_cache',False):
+			g.dspy_cache = ObjectCache()
+		func = g.dspy_cache.get(self.path)
+		if not func:
+			func = self.loadScript()
+			g.dspy_cache.store(self.path,func)
+		lenv = {}
+		lenv.update(g)
+		lenv.update(self.resource.env)
+		self.content = func(request,**lenv)
 
 class MarkdownProcessor(BaseProcessor):
 	@classmethod
 	def isMe(self,name):
 		return name=='md'
 
-	def datahandle(self,request):
+	async def datahandle(self,request:Request):
 		data = ''
 		with codecs.open(self.path,'rb','utf-8') as f:
 			data = f.read()

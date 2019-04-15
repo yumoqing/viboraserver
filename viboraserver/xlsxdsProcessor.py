@@ -45,7 +45,7 @@ class XLSXDataSourceProcessor(DataSourceProcessor):
 
 	def getPagingData(self,dict_data,ns,request):
 		path = dict_data.get('xlsxfile',None)
-		self.xlsxdata = XLSXData(self.g.abspath(self.g.absurl(request,path)),dict_data)
+		self.xlsxdata = XLSXData(self.g.abspath(ns.absurl(request,path)),dict_data)
 		ret = self.xlsxdata.getPagingData(ns)
 		return ret
 		

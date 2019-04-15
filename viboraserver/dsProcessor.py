@@ -1,6 +1,7 @@
 import codecs
 import json
 from appPublic.jsonConfig import getConfig
+from appPublic.dictObject import DictObject
 from .baseProcessor import BaseProcessor
 from .serverenv import ServerEnv
 
@@ -48,13 +49,17 @@ class DataSourceProcessor(BaseProcessor):
 		}
 		return ret
 
-	def datahandle(self,request):
+	async def datahandle(self,request):
 		dict_data = {}
 		config = getConfig()
 		with codecs.open(self.path,'r',config.website.coding) as f:
 			b = f.read()
 			dict_data = json.loads(b)
-		ns = self.g.request2ns()
+		ns = DictObject()
+		g = ServerEnv()
+		ns.update(g)
+		ns.update(self.resource.env)
+		ns.update(self.resource.getGetArgs(request))
 		act = ns.get('action','getdata')
 		action = self.actions.get(act)
 		self.content = action(dict_data,ns,request)
