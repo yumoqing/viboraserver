@@ -5,7 +5,7 @@ extend vibora with the following:
 * processor for registed file type
 * pre-defined variables and function can be called by processors
 * DBPools and SQL wrap
-* config file stored at ./conf/config.json
+* config file stored at ./conf/confi* json
 * i18n support
 * processors include:
 	+ 'dspy' file subffix by '.dspy', is process as a python script
@@ -69,11 +69,11 @@ viboraserver using json file format in its configuration, the following is a sam
 }
 ```
 ### run mode configuration
-if want viboraserver running in debug mode, just add a key-value pairs in config.json
+if want viboraserver running in debug mode, just add a key-value pairs in confi* json
 ```
         "debug":true,
 ```
-else just delete this key-value in config.json in conf folder
+else just delete this key-value in confi* json in conf folder
 
 ### database configuration
 viboraserver support database data operations, corrently, it ***ONLY*** support synchronous DBAPI2. 
@@ -85,7 +85,7 @@ the viboraserver using packages for database engines are:
 
 however, you can change it, but must change the "driver" value the the package name in the database connection definition.
 
-in the databases section in config.json, you can define one or more database connection, and also, it support many database engine, just as ORACLE,mysql,postgreSQL.
+in the databases section in confi* json, you can define one or more database connection, and also, it support many database engine, just as ORACLE,mysql,postgreSQL.
 define a database connnect you need follow the following json format.
 
 * mysql or mariadb
@@ -151,7 +151,7 @@ the dbname and "db" should the same, which is the database name in mysql databas
 ### website configuration
 #### paths
 viboraserver can serve its contents (static file, dynamic contents render by its processors) resided on difference folders in the server file system.
-viboraserver finds a content identified by http url in order the of the paths specified by "paths" lists inside "website" definition of config.json file
+viboraserver finds a content identified by http url in order the of the paths specified by "paths" lists inside "website" definition of confi* json file
 #### processors
 all the prcessors viboraserver using, must be listed here.
 #### host
@@ -167,4 +167,58 @@ default content file names, viboraserver will use first found file names in the 
 the browsers will send 'Accept-Language' are difference even if the same language. so viboraserver using a "langMapping" definition to mapping multiple browser lang to same i18n file
 
 
+## international
+viboraserver using MiniI18N in appPublic modules in pyutils package to implements i18n support
 
+it will search translate text in ms* txt file in folder named by language name inside i18n folder in workdir folder, workdir is the folder where the viboraserver program resided or identified by command line paraments.
+
+## performance
+You can find "Hello world" performance about viboraserver in vibora programs main page
+
+viboraserver will list and performance test for its processors later
+
+## environment for processors
++ modules:
+* time
+* datetime
+* random
+* json
+
++ functions:
+* configValue
+* isNone
+* int
+* str
+* float
+* type
+* str2date
+* str2datetime
+* curDatetime
+* uuid
+* runSQL
+* runSQLPaging
+* runSQLIterator
+* runSQLResultFields
+* getTables
+* getTableFields
+* getTablePrimaryKey
+* getTableForignKeys
+* folderInfo
+* abspath
+* request2ns
+* CRUD
+* data2xlsx
+* xlsxdata
+* openfile
+* i18n
+* i18nDict
+* absurl
+* abspath
+* request2ns
+
++ variables
+* resource
+* terminalType
+
++ classes
+* ArgsConvert
