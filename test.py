@@ -2,8 +2,6 @@ import sys
 import os
 import logging
 
-from patterncoding.myTemplateEngine import MyTemplateEngine
-
 from appPublic.folderUtils import ProgramPath
 from appPublic.jsonConfig import getConfig
 
