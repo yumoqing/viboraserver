@@ -173,10 +173,176 @@ viboraserver using MiniI18N in appPublic modules in pyutils package to implement
 it will search translate text in ms* txt file in folder named by language name inside i18n folder in workdir folder, workdir is the folder where the viboraserver program resided or identified by command line paraments.
 
 ## performance
-You can find "Hello world" performance about viboraserver in vibora programs main page
+You can find "Hello world" performance about viboraserver in [vibora](https://github.com/vibora-io/vibora)  main page
 
 viboraserver will list and performance test for its processors later
+### test macheine
+xiaomi pro 15.6 i7 cpu, 16Gb memory,m2 256G disk
+os: ubuntu 18.4
+vibora 0.0.7
+### static file
 
+Running 30s test @ http://localhost:8080/swift/books/hub/welcome.htm
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    24.53ms   25.42ms 461.06ms   95.70%
+    Req/Sec     1.50k   320.16     4.00k    69.29%
+  533944 requests in 30.10s, 414.67MB read
+  Socket errors: connect 0, read 177, write 0, timeout 0
+  Non-2xx or 3xx responses: 162164
+Requests/sec:  17740.03
+Transfer/sec:     13.78MB
+
+welcome.htm file size:
+```
+-rw-rw-r-- 1 ymq ymq   952 12月 12  2017 welcome.htm
+```
+### dspy processor
+Running 30s test @ http://localhost:8080/estate/functionlists.dspy
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    35.18ms   17.45ms 187.20ms   73.62%
+    Req/Sec     0.96k   230.18     2.16k    66.82%
+  343789 requests in 30.09s, 726.22MB read
+Requests/sec:  11426.72
+Transfer/sec:     24.14MB
+
+functionlists.dspy
+```
+selfserv = [
+	{
+		"funcid":"0.1",
+		"text":"用户注册"
+	},
+	{
+		"funcid":"0.2",
+		"text":"用户签到"
+	},
+	{
+		"funcid":"0.3",
+		"text":"修改密码"
+	},
+	{
+		"funcid":"0.4",
+		"text":"用户签退"
+	},
+]
+
+saving = [
+	{
+		"funcid":"1.1",
+		"text":"我的存房"
+	},
+	{
+		"funcid":"1.2",
+		"text":"存房收藏"	
+	},
+	{
+		"funcid":"1.3",
+		"text":"不动产录入"	
+	}
+]
+
+rentfin = [
+	{
+		"funcid":"3.1",
+		"text":"融房收藏"
+	},
+	{
+		"funcid":"3.2",
+		"text":"我的融房"
+	},
+	{
+		"funcid":"3.3",
+		"text":"新增融房"
+	},
+	{
+		"funcid":"3.4",
+		"text":"融房标准协议"
+	},
+	{
+		"funcid":"3.5",
+		"text":"打包资产"
+	}
+]
+return [
+	{
+		"funcid":"99",
+		"text":"首页"
+	},
+	{
+		"funcid":"0",
+		"text":"自服务",
+		"state":"open",
+		"children":selfserv
+	},
+	{
+		"funcid":"1",
+		"text":"存房",
+		"state":"open",
+		"children":saving
+	},
+	{
+		"funcid":"2",
+		"text":"优房"
+	},
+	{
+		"funcid":"3",
+		"text":"融房",
+		"state":"open",
+		"children":rentfin
+	},
+	{
+		"funcid":"4",
+		"text":"获房"
+	},
+	{
+		"funcid":"5",
+		"text":"运房"
+	},
+	{
+		"funcid":"6",
+		"text":"出房"
+	}
+]
+```
+
+### tmpl processor
+
+Running 30s test @ http://localhost:8080/estate/saving/index.tmpl
+  12 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    27.53ms   14.34ms 172.99ms   73.75%
+    Req/Sec     1.23k   294.38     2.57k    67.73%
+  441885 requests in 30.09s, 246.53MB read
+Requests/sec:  14685.00
+Transfer/sec:      8.19MB
+
+/estate/saving/index.tmpl is:
+```
+{
+    "__ctmpl__":"layout",
+    "data":{
+        "regions":{
+            "north":{
+                "height":"50px",
+                "remoteWidgets":[
+                    "{{absurl(request,'./searchform.tmpl')}}"
+                ]
+            },
+            "center":{
+                "remoteWidgets":[
+                    "{{absurl(request,'./estateView.tmpl')}}"
+                ]
+
+            }
+        }
+    },
+    "__metadata__":{
+        "__jename__":"layout"
+    }
+}
+```
 ## environment for processors
 ### modules:
 * time
