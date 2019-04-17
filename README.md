@@ -15,7 +15,9 @@ extend vibora with the following:
 	+ 'sqlds' files subffixed by '.sqlds' is process as a data source from database via a sql command
 
 ## dependences
+
 [vibora](https://github.com/vibora-io/vibora)
+
 [pyutils](https://github.com/yumoqing/pyutils)
 
 ## configuration file content
@@ -164,15 +166,18 @@ viboraserver recomments using 'utf-8'
 default content file names, viboraserver will use first found file names in the folder
 
 ### langMapping
+
 the browsers will send 'Accept-Language' are difference even if the same language. so viboraserver using a "langMapping" definition to mapping multiple browser lang to same i18n file
 
 
 ## international
+
 viboraserver using MiniI18N in appPublic modules in pyutils package to implements i18n support
 
 it will search translate text in ms* txt file in folder named by language name inside i18n folder in workdir folder, workdir is the folder where the viboraserver program resided or identified by command line paraments.
 
 ## performance
+
 You can find "Hello world" performance about viboraserver in [vibora](https://github.com/vibora-io/vibora)  main page
 
 viboraserver will list and performance test for its processors later
@@ -181,7 +186,7 @@ xiaomi pro 15.6 i7 cpu, 16Gb memory,m2 256G disk
 os: ubuntu 18.4
 vibora 0.0.7
 ### static file
-
+```
 Running 30s test @ http://localhost:8080/swift/books/hub/welcome.htm
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
@@ -192,12 +197,15 @@ Running 30s test @ http://localhost:8080/swift/books/hub/welcome.htm
   Non-2xx or 3xx responses: 162164
 Requests/sec:  17740.03
 Transfer/sec:     13.78MB
+```
 
 welcome.htm file size:
 ```
 -rw-rw-r-- 1 ymq ymq   952 12月 12  2017 welcome.htm
 ```
 ### dspy processor
+
+```
 Running 30s test @ http://localhost:8080/estate/functionlists.dspy
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
@@ -206,6 +214,7 @@ Running 30s test @ http://localhost:8080/estate/functionlists.dspy
   343789 requests in 30.09s, 726.22MB read
 Requests/sec:  11426.72
 Transfer/sec:     24.14MB
+```
 
 functionlists.dspy
 ```
@@ -309,6 +318,7 @@ return [
 
 ### tmpl processor
 
+```
 Running 30s test @ http://localhost:8080/estate/saving/index.tmpl
   12 threads and 400 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
@@ -317,6 +327,7 @@ Running 30s test @ http://localhost:8080/estate/saving/index.tmpl
   441885 requests in 30.09s, 246.53MB read
 Requests/sec:  14685.00
 Transfer/sec:      8.19MB
+```
 
 /estate/saving/index.tmpl is:
 ```
@@ -344,6 +355,10 @@ Transfer/sec:      8.19MB
 }
 ```
 ## environment for processors
+
+When coding in processors, viboraserver provide some environment stuff for build apllication, there are modules, functions, classes and variables
+
+
 ### modules:
 * time
 * datetime
