@@ -5,7 +5,7 @@ extend vibora with the following:
 * processor for registed file type
 * pre-defined variables and function can be called by processors
 * DBPools and SQL wrap
-* config file stored at ./conf/confi* json
+* config file stored at ./conf/config.json json
 * i18n support
 * processors include:
 	+ 'dspy' file subffix by '.dspy', is process as a python script
@@ -71,11 +71,11 @@ viboraserver using json file format in its configuration, the following is a sam
 }
 ```
 ### run mode configuration
-if want viboraserver running in debug mode, just add a key-value pairs in confi* json
+if want viboraserver running in debug mode, just add a key-value pairs in config.json
 ```
         "debug":true,
 ```
-else just delete this key-value in confi* json in conf folder
+else just delete this key-value in config.json in conf folder
 
 ### database configuration
 viboraserver support database data operations, corrently, it ***ONLY*** support synchronous DBAPI2. 
@@ -87,7 +87,7 @@ the viboraserver using packages for database engines are:
 
 however, you can change it, but must change the "driver" value the the package name in the database connection definition.
 
-in the databases section in confi* json, you can define one or more database connection, and also, it support many database engine, just as ORACLE,mysql,postgreSQL.
+in the databases section in config.json, you can define one or more database connection, and also, it support many database engine, just as ORACLE,mysql,postgreSQL.
 define a database connnect you need follow the following json format.
 
 * mysql or mariadb
@@ -153,7 +153,7 @@ the dbname and "db" should the same, which is the database name in mysql databas
 ### website configuration
 #### paths
 viboraserver can serve its contents (static file, dynamic contents render by its processors) resided on difference folders in the server file system.
-viboraserver finds a content identified by http url in order the of the paths specified by "paths" lists inside "website" definition of confi* json file
+viboraserver finds a content identified by http url in order the of the paths specified by "paths" lists inside "website" definition of config.json file
 #### processors
 all the prcessors viboraserver using, must be listed here.
 #### host

@@ -17,8 +17,8 @@ class ObjectCache:
 		self.cache = {}
 
 	def store(self,path,obj):
-		o = self.cache.get(path)
-		if o:
+		o = self.cache.get(path,None)
+		if o is not None:
 			del o.cached_obj
 		o = DictObject()
 		o.cached_obj = obj
