@@ -20,6 +20,34 @@ extend vibora with the following:
 
 [pyutils](https://github.com/yumoqing/pyutils)
 
+## How to use
+sample.py
+```import os
+import sys
+from viboraserver.configuredserver import ConfiguredServer
+from appPublic.folderUtils import ProgramPath
+from appPublic.jsonConfig import getConfig
+
+if __name__ == '__main__':
+        program_path = ProgramPath()
+        workdir = program_path
+        if len(sys.argv)>1:
+                workdir = sys.argv[1]
+        config = getConfig(path=workdir,NS={'workdir':workdir,'ProgramPath':program_path})
+        server = ConfiguredServer()
+        server.run()
+```
+
+## folder structure
+
++ app
++ |-sample.py
++ |--viboraserver
++ |-conf
++      |-config.json
++ |-i18n
+
+
 ## configuration file content
 viboraserver using json file format in its configuration, the following is a sample:
 ```
