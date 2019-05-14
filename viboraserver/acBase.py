@@ -20,7 +20,6 @@ from .baseProcessor import getProcessor
 from .xlsxdsProcessor import XLSXDataSourceProcessor
 from .sqldsProcessor import SQLDataSourceProcessor
 from .serverenv import ServerEnv
-from .globalEnv import envsetted
 from .url2file import Url2File
 
 class MyApp(Vibora):
@@ -166,7 +165,8 @@ class BaseResource(StaticHandler,Url2File):
 
 	def abspath(self,path:str):
 		for rpath in self.paths:
-			real_path = rpath + path
+			rp = rpath + path
+			real_path = os.path.abspath(rp)
 			if os.path.isfile(real_path):
 				return real_path
 		return None

@@ -19,7 +19,10 @@ class ObjectCache:
 	def store(self,path,obj):
 		o = self.cache.get(path,None)
 		if o is not None:
-			del o.cached_obj
+			try:
+				del o.cached_obj
+			except:
+				pass
 		o = DictObject()
 		o.cached_obj = obj
 		o.mtime = os.path.getmtime(path)
@@ -106,14 +109,14 @@ class PythonScriptProcessor(BaseProcessor):
 	def isMe(self,name):
 		return name=='dspy'
 
-	def loadScript(self):
+	async def loadScript(self):
 		data = ''
 		with codecs.open(self.path,'rb','utf-8') as f:
 			data = f.read()
 		b= ''.join(data.split('\r'))
 		lines = b.split('\n')
 		lines = ['\t' + l for l in lines ]
-		txt = "def __myfunc_(request,**ns):\n" + '\n'.join(lines)
+		txt = "async def __myfunc_(request,**ns):\n" + '\n'.join(lines)
 		g = ServerEnv()
 		lenv = {}
 		lenv.update(g)
@@ -128,12 +131,12 @@ class PythonScriptProcessor(BaseProcessor):
 			g.dspy_cache = ObjectCache()
 		func = g.dspy_cache.get(self.path)
 		if not func:
-			func = self.loadScript()
+			func = await self.loadScript()
 			g.dspy_cache.store(self.path,func)
 		lenv = {}
 		lenv.update(g)
 		lenv.update(self.resource.env)
-		self.content = func(request,**lenv)
+		self.content = await func(request,**lenv)
 
 class MarkdownProcessor(BaseProcessor):
 	@classmethod

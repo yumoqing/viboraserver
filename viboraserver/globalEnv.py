@@ -21,9 +21,10 @@ from appPublic.unicoding import unicoding,uDict,uObject
 from appPublic.Singleton import SingletonDecorator
 
 from sql.crud import _CRUD,CRUD
-from sql.sqlorAPI import DBPools,runSQL,runSQLPaging,runSQLIterator
-from sql.sqlorAPI import getTables,getTableFields,getTablePrimaryKey
-from sql.sqlorAPI import getTableForignKeys,runSQLResultFields
+# from sql.sqlorAPI import DBPools,runSQL,runSQLPaging,runSQLIterator
+# from sql.sqlorAPI import getTables,getTableFields,getTablePrimaryKey
+# from sql.sqlorAPI import getTableForignKeys,runSQLResultFields
+from sqlor.dbpools import DBPools
 
 
 from .xlsxData import XLSXData
@@ -61,9 +62,13 @@ class FileOutZone(Exception):
 		
 def openfile(url,m):
 	fp = abspath(url)
+	if fp is None:
+		print('openfile(',url,m,'),url is not match a file')
+		raise Exception('url can not mathc a file')
 	config = getConfig()
+	paths = [ os.path.abspath(p) for p in config.website.paths ]
 	fs = config.get('allow_folders',[])
-	fs = [ os.path.abspath(i) for i in fs + config.website.paths ]
+	fs = [ os.path.abspath(i) for i in fs + paths ]
 	r = False
 	for f in fs:
 		if fp.startswith(f):
@@ -78,7 +83,8 @@ def isNone(a):
 
 def abspath(path):
 	config = getConfig()
-	for root in config.website.paths:
+	paths = [ os.path.abspath(p) for p in config.website.paths ]
+	for root in paths:
 		p = root + path
 		if os.path.exists(root+path):
 			return p
@@ -129,39 +135,39 @@ def file_download(request,path,name,coding='utf8'):
 	request.write(b)
 	request.finish()
 	
-g = ServerEnv()
-g.configValue = configValue
-g.visualcoding = visualcoding
-g.uriop = URIOp
-g.isNone = isNone
-g.json = json
-g.int = int
-g.str = str
-g.float = float
-g.type = type
-g.ArgsConvert = ArgsConvert
-g.time = time
-g.datetime = datetime
-g.random = random
-g.str2date = str2Date
-g.str2datetime = str2Datetime
-g.curDatetime = curDatetime
-g.uObject = uObject
-g.uuid = getID
-g.runSQL = runSQL
-g.runSQLPaging = runSQLPaging
-g.runSQLIterator = runSQLIterator
-g.runSQLResultFields = runSQLResultFields
-g.getTables = getTables
-g.getTableFields = getTableFields
-g.getTablePrimaryKey = getTablePrimaryKey
-g.getTableForignKeys = getTableForignKeys
-g.folderInfo = folderInfo
-g.abspath = abspath
-g.request2ns = request2ns
-g.CRUD = CRUD
-g.data2xlsx = data2xlsx
-g.xlsxdata = XLSXData
-g.openfile = openfile
-
-envsetted = 1
+def initEnv():
+	pool = DBPools()
+	g = ServerEnv()
+	g.configValue = configValue
+	g.visualcoding = visualcoding
+	g.uriop = URIOp
+	g.isNone = isNone
+	g.json = json
+	g.int = int
+	g.str = str
+	g.float = float
+	g.type = type
+	g.ArgsConvert = ArgsConvert
+	g.time = time
+	g.datetime = datetime
+	g.random = random
+	g.str2date = str2Date
+	g.str2datetime = str2Datetime
+	g.curDatetime = curDatetime
+	g.uObject = uObject
+	g.uuid = getID
+	g.runSQL = pool.runSQL
+	g.runSQLPaging = pool.runSQLPaging
+	g.runSQLIterator = pool.runSQL
+	g.runSQLResultFields = pool.runSQLResultFields
+	g.getTables = pool.getTables
+	g.getTableFields = pool.getTableFields
+	g.getTablePrimaryKey = pool.getTablePrimaryKey
+	g.getTableForignKeys = pool.getTableForignKeys
+	g.folderInfo = folderInfo
+	g.abspath = abspath
+	g.request2ns = request2ns
+	g.CRUD = CRUD
+	g.data2xlsx = data2xlsx
+	g.xlsxdata = XLSXData
+	g.openfile = openfile

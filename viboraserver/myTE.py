@@ -49,7 +49,8 @@ def setupTemplateEngine():
 	config = getConfig()
 	subffixes = [ i[0] for i in config.website.processors if i[1] == 'tmpl' ]
 	print(subffixes)
-	loader = TmplLoader(config.website.paths,config.website.indexes,subffixes,inherit=True)
+	paths = [ os.path.abspath(p) for p in config.website.paths ]
+	loader = TmplLoader(paths,config.website.indexes,subffixes,inherit=True)
 	engine = TemplateEngine(loader)
 	g = ServerEnv()
 	g.tmpl_engine = engine

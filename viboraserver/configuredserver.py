@@ -6,8 +6,9 @@ import logging
 from appPublic.folderUtils import ProgramPath
 from appPublic.jsonConfig import getConfig
 
-from sql.sqlorAPI import DBPools
+from sqlor.dbpools import DBPools
 
+from .globalEnv import initEnv
 from .acBase import MyApp, BaseResource
 from .serverenv import ServerEnv
 from .xlsxdsProcessor import XLSXDataSourceProcessor
@@ -26,7 +27,9 @@ class ConfiguredServer:
 		config = getConfig(workdir,{'ProgramPath':programPath,'workdir':workdir})
 		if config.get('databases'):
 			DBPools(config.databases)
-		resource = BaseResource(config.website.paths,indexes=config.website.indexes)
+		initEnv()
+		paths = [ os.path.abspath(p) for p in config.website.paths ]
+		resource = BaseResource(paths,indexes=config.website.indexes)
 		setupTemplateEngine()
 		resource.indexes = config.website.indexes
 		resource.processors = config.website.processors

@@ -22,7 +22,8 @@ class Url2File:
 	def isFolder(self,url: str):
 		for r in self.paths:
 			rp = r + url
-			if os.path.isdir(rp):
+			real_path = os.path.abspath(rp)
+			if os.path.isdir(real_path):
 				return True
 		return False
 
@@ -43,7 +44,8 @@ class Url2File:
 
 		for r in self.paths:
 			f = r + url
-			if os.path.isfile(f):
+			real_path = os.path.abspath(f)
+			if os.path.isfile(real_path):
 				return f
 		if not self.inherit:
 			return None
@@ -76,7 +78,8 @@ class TmplUrl2File(Url2File):
 
 	def list_tmpl(self):
 		ret = []
-		for p in self.paths:
+		for rp in self.paths:
+			p = os.path.abspath(rp)
 			[ ret.append(i) for i in listFile(p,suffixs=self.subffixes,rescursive=True) ]	
 		return sorted(ret)
 

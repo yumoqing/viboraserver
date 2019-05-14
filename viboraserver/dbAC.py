@@ -1,6 +1,6 @@
 # -*- coding:utf8 -*-
 from WebServer.acBase import ACBase
-from sql.sqlorAPI import runSQL,runSQLIterator
+from sqlor.dbpools import DBPools
 from sql.crud import _CRUD
 from appPublic.rc4 import RC4
 from appPublic.uniqueID import getID
@@ -12,6 +12,7 @@ class DatabaseAC(ACBase):
 	def __init__(self,db,encryptKey):
 		super(DatabaseAC,self).__init__()
 		self.db = db
+		self.pool = DBPools()
 		self.encryptKey = encryptKey
 		self.rc4 = RC4(encryptKey)
 		
@@ -19,7 +20,7 @@ class DatabaseAC(ACBase):
 		"""
 		用userid和加密后的密码组合条件查询ac_users表中的用户记录，查到则用户认证成功，否则失败
 		"""
-		@runSQLIterator
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"""select * 
@@ -41,7 +42,7 @@ class DatabaseAC(ACBase):
 		检查用户是否拥有path所代表的功能的权限，如果ac_userpermission表中存在用户与功能对，
 		  或ac_rolepermission表中存在用户的任一角色与功能对，则用户拥有此功能权限。
 		"""
-		@runSQLIterator
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"""
@@ -90,7 +91,7 @@ class DatabaseAC(ACBase):
 		"""
 		检查路径是否在ac_functions表中，如果不在则返回false，不需要用户登录，任何人可以访问
 		"""
-		@runSQLIterator
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"select * from ac_functions where url=${url}$"
@@ -102,7 +103,7 @@ class DatabaseAC(ACBase):
 		return f
 	
 	def addUser(self,userid,username,password):
-		@runSQL
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"""insert into ac_users 
@@ -122,7 +123,7 @@ class DatabaseAC(ACBase):
 		return ns
 		
 	def addRole(self,roleName):
-		@runSQL
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"""insert into ac_roles (role_id,rolename) values (${role_id}$,${rolename}$)"""
@@ -137,7 +138,7 @@ class DatabaseAC(ACBase):
 		return ns
 		
 	def addFunction(self,fname,url):
-		@runSQL
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"""
@@ -158,7 +159,7 @@ class DatabaseAC(ACBase):
 		return ns
 		
 	def addPermission(self,pname):
-		@runSQL
+		@self.pool.runSQL
 		def sql(db,ns):
 			desc = {
 				"sql_string":"""
@@ -219,7 +220,7 @@ class DatabaseAC(ACBase):
 		
 if __name__ == '__main__':
 	from appPublic.jsonConfig import getConfig
-	from sql.sqlorAPI import DBPools
+	from sqlor.dbpools import DBPools
 	p = 'd:/run'
 	conf = getConfig(p)
 	DBPools(conf.databases)

@@ -14,12 +14,15 @@ extend vibora with the following:
 	+ 'xlsxds' files subffix by '.xlsxds' is process as a data source from xlsx file
 	+ 'sqlds' files subffixed by '.sqlds' is process as a data source from database via a sql command
 
-## dependences
+## Requirements
 
 [vibora](https://github.com/vibora-io/vibora)
 
 [pyutils](https://github.com/yumoqing/pyutils)
 
+<<<<<<< HEAD
+[sqlor](https://github.com/yumoqing/sqlor)
+=======
 ## How to use
 sample.py
 ```import os
@@ -47,6 +50,7 @@ if __name__ == '__main__':
 +      |-config.json
 + |-i18n
 
+>>>>>>> af0afa439fc9ac40beadb169190bb0a90b34b7f7
 
 ## configuration file content
 viboraserver using json file format in its configuration, the following is a sample:
@@ -344,6 +348,55 @@ return [
 ]
 ```
 
+### Data read from database
+
+Test performance for asynchronous dbapi2 driver, here is aiomysql
+```
+wrk -c400 -d30s -t4 http://localhost/asql.dspy
+Running 30s test @ http://localhost/asql.dspy
+  4 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   189.76ms  137.67ms   1.82s    77.66%
+    Req/Sec   401.46     63.01   660.00     72.29%
+  47950 requests in 30.07s, 188.03MB read
+  Non-2xx or 3xx responses: 13
+Requests/sec:   1594.83
+Transfer/sec:      6.25MB
+```
+asql.dspy(aiomysql)
+```
+@runSQLPaging
+def sql(db,ns):
+        return {
+
+                "sql_string":"select * from product"
+        }
+
+return await sql('aiocfae',{"page":1,"rows":10,"sort":"productid"})
+```
+and synchronous dbapi2 driver(mysql-connector)
+```
+wrk -c400 -d30s -t4 http://localhost/sql.dspy
+Running 30s test @ http://localhost/sql.dspy
+  4 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   221.07ms   80.60ms 687.16ms   72.53%
+    Req/Sec   351.23    121.12   686.00     66.67%
+  41997 requests in 30.06s, 164.73MB read
+Requests/sec:   1397.07
+Transfer/sec:      5.48MB
+```
+sql.dspy(mysql-connector)
+```
+@runSQLPaging
+def sql(db,ns):
+        return {
+
+                "sql_string":"select * from product"
+        }
+
+return await sql('cfae',{"page":1,"rows":10,"sort":"productid"})
+```
 ### tmpl processor
 
 ```

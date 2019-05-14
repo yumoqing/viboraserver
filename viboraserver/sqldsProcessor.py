@@ -1,7 +1,7 @@
 import codecs
 from .dsProcessor import DataSourceProcessor
 from appPublic.jsonConfig import getConfig
-from sql.sqlorAPI import runSQLResultFields,runSQLIterator,runSQLPaging
+from sqlor.dbpools import DBPools
 import  json
 """
 sqlds file format:
@@ -36,7 +36,8 @@ class SQLDataSourceProcessor(DataSourceProcessor):
 		return desc
 		
 	def getDataDesc(self,dict_data,ns,request):
-		@runSQLResultFields
+		pool = DBPools()
+		@pool.runSQLResultFields
 		def sql(dbname,NS):
 			sqldesc = dict_data.get('sqldesc')
 			# print('sql(),sqldesc=',sqldesc)
@@ -54,7 +55,8 @@ class SQLDataSourceProcessor(DataSourceProcessor):
 		return rec
 
 	def getData(self,dict_data,ns,request):
-		@runSQLIterator
+		pool = DBPools()
+		@pool.runSQL
 		def sql(dbname,NS):
 			sqldesc = dict_data.get('sqldesc')
 			return sqldesc
@@ -63,7 +65,8 @@ class SQLDataSourceProcessor(DataSourceProcessor):
 		return ret
 		
 	def getPagingData(self,dict_data,ns,request):
-		@runSQLPaging
+		pool = DBPools()
+		@pool.runSQLPaging
 		def sql(dbname,NS):
 			sqldesc = dict_data.get('sqldesc')
 			return sqldesc
