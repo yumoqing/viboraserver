@@ -20,9 +20,8 @@ extend vibora with the following:
 
 [pyutils](https://github.com/yumoqing/pyutils)
 
-<<<<<<< HEAD
 [sqlor](https://github.com/yumoqing/sqlor)
-=======
+
 ## How to use
 sample.py
 ```import os
@@ -41,7 +40,7 @@ if __name__ == '__main__':
         server.run()
 ```
 
-## folder structure
+## Folder structure
 
 + app
 + |-sample.py
@@ -50,14 +49,35 @@ if __name__ == '__main__':
 +      |-config.json
 + |-i18n
 
->>>>>>> af0afa439fc9ac40beadb169190bb0a90b34b7f7
-
-## configuration file content
+## Configuration file content
 viboraserver using json file format in its configuration, the following is a sample:
 ```
 {
         "debug":true,
         "databases":{
+		"aiocfae":{
+                        "driver":"aiomysql",
+			"async_mode":true,
+                        "coding":"utf8",
+                        "dbname":"cfae",
+                        "kwargs":{
+                                "user":"test",
+                                "db":"cfae",
+                                "password":"test123",
+                                "host":"localhost"
+                        }
+		},
+		"cfae":{
+                        "driver":"mysql.connector",
+                        "coding":"utf8",
+                        "dbname":"cfae",
+                        "kwargs":{
+                                "user":"test",
+                                "db":"cfae",
+                                "password":"test123",
+                                "host":"localhost"
+                        }
+		}
         },
         "website":{
                 "paths":[
